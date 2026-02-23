@@ -1,0 +1,52 @@
+services:
+  db:
+    image: mysql:8.0
+    container_name: wp-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: wordpress
+      MYSQL_USER: wpuser
+      MYSQL_PASSWORD: wppass
+      MYSQL_ROOT_PASSWORD: rootpass
+    volumes:
+      - db_data:/var/lib/mysql
+    networks:
+      - wpnet
+
+  wordpress:
+    image: wordpress:php8.2-fpm
+    container_name: wp-fpm
+    depends_on:
+      - db
+    environment:
+      WORDPRESS_DB_HOST: db:3306
+      WORDPRESS_DB_USER: wpuser
+      WORDPRESS_DB_PASSWORD: wppass
+      WORDPRESS_DB_NAME: wordpress
+    volumes:
+      - wp_data:/var/www/html
+      - ./php/99-uploads.ini:/usr/local/etc/php/conf.d/99-uploads.ini
+    restart: unless-stopped
+    networks:
+      - wpnet
+
+  nginx:
+    image: nginx:1.26-alpine
+    container_name: wp-nginx
+    depends_on:
+      - wordpress
+    ports:
+      - "8080:80"
+    volumes:
+      - wp_data:/var/www/html
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
+    restart: unless-stopped
+    networks:
+      - wpnet
+
+volumes:
+  db_data:
+  wp_data:
+
+networks:
+  wpnet:
